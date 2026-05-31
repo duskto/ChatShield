@@ -60,3 +60,10 @@ async def get_ollama_status() -> dict[str, Any]:
             "models": [],
         }
 
+
+async def list_ollama_models() -> dict[str, Any]:
+    status = await get_ollama_status()
+    return {
+        "default_model": get_settings().ollama_model,
+        "models": status.get("models", []),
+    }

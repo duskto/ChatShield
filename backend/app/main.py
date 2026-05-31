@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import init_db
-from app.routers import chat, config, dashboard, logs
+from app.routers import chat, config, dashboard, logs, rules
 from app.schemas.system import HealthResponse
 
 
@@ -30,6 +30,7 @@ app.include_router(chat.router)
 app.include_router(logs.router)
 app.include_router(dashboard.router)
 app.include_router(config.router)
+app.include_router(rules.router)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])
@@ -48,4 +49,3 @@ def root() -> dict:
         "docs": "/docs",
         "health": "/health",
     }
-

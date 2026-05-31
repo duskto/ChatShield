@@ -12,6 +12,7 @@
         <el-menu-item index="/chat">Chat 对话测试</el-menu-item>
         <el-menu-item index="/dashboard">Dashboard 风险看板</el-menu-item>
         <el-menu-item index="/logs">Audit Logs 审计日志</el-menu-item>
+        <el-menu-item index="/rules">Rule Manage 规则管理</el-menu-item>
         <el-menu-item index="/config">System Config 系统配置</el-menu-item>
       </el-menu>
     </aside>
@@ -19,7 +20,9 @@
       <header class="topbar page-card">
         <div>
           <div class="topbar-title">{{ currentTitle }}</div>
-          <div class="topbar-subtitle">默认模型：{{ appStore.config?.ollama_model || "加载中" }}</div>
+          <div class="topbar-subtitle">
+            默认模型：{{ appStore.defaultModel || appStore.config?.ollama_model || "加载中" }}
+          </div>
         </div>
         <div class="status-row">
           <div class="status-pill" :class="{ online: appStore.ollamaStatus?.available }">
@@ -156,4 +159,3 @@ onMounted(() => {
   }
 }
 </style>
-

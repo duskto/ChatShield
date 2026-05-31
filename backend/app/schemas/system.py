@@ -23,4 +23,9 @@ class StatusResponse(BaseModel):
     available: bool
     provider: str
     message: str
+    models: list[str] = []
 
+
+class ModelListResponse(BaseModel):
+    default_model: str
+    models: list[str]

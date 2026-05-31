@@ -11,6 +11,7 @@ from app.services.audit_service import create_audit_log
 from app.services.ollama_service import chat_with_ollama
 from app.services.risk_engine import build_safe_result, finalize_detection_result, merge_detection_results
 from app.services.rule_checker import check_text_by_rules
+from app.services.rule_service import list_enabled_rules
 from app.utils.response import safe_block_reply
 from app.utils.time import elapsed_ms, utc_now
 
@@ -22,9 +23,19 @@ async def create_chat(request: ChatRequest, db: Session = Depends(get_db)) -> di
     settings = get_settings()
     start_at = utc_now()
     model_name = request.model or settings.ollama_model
+    custom_rules = [
+        {
+            "name": rule.name,
+            "category": rule.category,
+            "pattern": rule.pattern,
+            "match_type": rule.match_type,
+            "risk_level": rule.risk_level,
+        }
+        for rule in list_enabled_rules(db)
+    ]
 
     input_rule_result = (
-        check_text_by_rules(request.message)
+        check_text_by_rules(request.message, custom_rules=custom_rules)
         if settings.enable_rule_check
         else build_safe_result(reason="本地规则检测已禁用", provider="rule")
     )
@@ -101,7 +112,7 @@ async def create_chat(request: ChatRequest, db: Session = Depends(get_db)) -> di
 
     model_reply = ollama_result["reply"]
     output_rule_result = (
-        check_text_by_rules(model_reply)
+        check_text_by_rules(model_reply, custom_rules=custom_rules)
         if settings.enable_rule_check
         else build_safe_result(reason="本地规则检测已禁用", provider="rule")
     )
@@ -150,4 +161,3 @@ async def create_chat(request: ChatRequest, db: Session = Depends(get_db)) -> di
         "input_detection": input_detection,
         "output_detection": output_detection,
     }
-

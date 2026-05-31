@@ -7,7 +7,12 @@
       </div>
       <div class="hero-actions">
         <el-select v-model="form.model" class="model-select" placeholder="选择模型">
-          <el-option :label="defaultModel" :value="defaultModel" />
+          <el-option
+            v-for="model in modelOptions"
+            :key="model"
+            :label="model"
+            :value="model"
+          />
         </el-select>
         <el-button plain @click="clearMessages">清空记录</el-button>
       </div>
@@ -49,7 +54,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 
 import { sendChatMessage } from "../api/chat";
@@ -68,11 +73,22 @@ const messages = ref([
 const latestInputDetection = ref(null);
 const latestOutputDetection = ref(null);
 
-const defaultModel = computed(() => appStore.config?.ollama_model || "qwen2.5:3b");
+const defaultModel = computed(() => appStore.defaultModel || appStore.config?.ollama_model || "qwen2.5:3b");
+const modelOptions = computed(() => (appStore.models?.length ? appStore.models : [defaultModel.value]));
 const form = reactive({
   message: "",
   model: defaultModel.value,
 });
+
+watch(
+  defaultModel,
+  (value) => {
+    if (!form.model || !modelOptions.value.includes(form.model)) {
+      form.model = value;
+    }
+  },
+  { immediate: true },
+);
 
 async function submitChat() {
   if (!form.message.trim()) {
@@ -167,4 +183,3 @@ function clearMessages() {
   }
 }
 </style>
-

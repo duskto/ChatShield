@@ -13,6 +13,7 @@
           <el-descriptions-item label="环境">{{ appStore.config?.environment }}</el-descriptions-item>
           <el-descriptions-item label="Ollama URL">{{ appStore.config?.ollama_base_url }}</el-descriptions-item>
           <el-descriptions-item label="默认模型">{{ appStore.config?.ollama_model }}</el-descriptions-item>
+          <el-descriptions-item label="可用模型">{{ appStore.models?.join("、") || "未获取到" }}</el-descriptions-item>
           <el-descriptions-item label="审核提供商">{{ appStore.config?.moderation_provider }}</el-descriptions-item>
           <el-descriptions-item label="输入拦截阈值">{{ appStore.config?.input_block_threshold }}</el-descriptions-item>
           <el-descriptions-item label="输出拦截阈值">{{ appStore.config?.output_block_threshold }}</el-descriptions-item>
@@ -30,6 +31,12 @@
         <el-alert
           :title="`审核服务：${appStore.moderationStatus?.message || '加载中'}`"
           :type="appStore.moderationStatus?.available ? 'success' : 'warning'"
+          :closable="false"
+          show-icon
+        />
+        <el-alert
+          title="规则说明：数据库自定义规则会叠加在系统内置规则之上，对输入和输出同时生效。"
+          type="info"
           :closable="false"
           show-icon
         />

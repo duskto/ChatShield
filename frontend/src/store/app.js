@@ -1,6 +1,11 @@
 import { defineStore } from "pinia";
 
-import { fetchModerationStatus, fetchOllamaStatus, fetchSystemConfig } from "../api/config";
+import {
+  fetchModerationStatus,
+  fetchOllamaModels,
+  fetchOllamaStatus,
+  fetchSystemConfig,
+} from "../api/config";
 
 export const useAppStore = defineStore("app", {
   state: () => ({
@@ -8,24 +13,28 @@ export const useAppStore = defineStore("app", {
     config: null,
     ollamaStatus: null,
     moderationStatus: null,
+    models: [],
+    defaultModel: "qwen2.5:3b",
     loading: false,
   }),
   actions: {
     async hydrate() {
       this.loading = true;
       try {
-        const [config, ollamaStatus, moderationStatus] = await Promise.all([
+        const [config, ollamaStatus, moderationStatus, modelInfo] = await Promise.all([
           fetchSystemConfig(),
           fetchOllamaStatus(),
           fetchModerationStatus(),
+          fetchOllamaModels(),
         ]);
         this.config = config;
         this.ollamaStatus = ollamaStatus;
         this.moderationStatus = moderationStatus;
+        this.models = modelInfo.models?.length ? modelInfo.models : [modelInfo.default_model];
+        this.defaultModel = modelInfo.default_model || "qwen2.5:3b";
       } finally {
         this.loading = false;
       }
     },
   },
 });
-

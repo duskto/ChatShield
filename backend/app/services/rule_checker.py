@@ -96,7 +96,42 @@ def _update_risk_level(current_level: str, new_level: str) -> str:
     return new_level if RISK_ORDER[new_level] > RISK_ORDER[current_level] else current_level
 
 
-def check_text_by_rules(text: str) -> dict[str, Any]:
+def _check_custom_rules(text: str, normalized_text: str, custom_rules: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    matched_rules: list[dict[str, Any]] = []
+
+    for rule in custom_rules:
+        pattern = rule.get("pattern", "")
+        if not pattern:
+            continue
+
+        matched = False
+        match_type = rule.get("match_type", "keyword")
+        if match_type == "regex":
+            try:
+                matched = re.search(pattern, text, flags=re.IGNORECASE) is not None
+            except re.error:
+                matched = False
+        else:
+            matched = pattern.lower() in normalized_text
+
+        if not matched:
+            continue
+
+        matched_rules.append(
+            {
+                "name": rule.get("name", "custom_rule"),
+                "keyword": pattern if match_type == "keyword" else None,
+                "pattern": pattern if match_type == "regex" else None,
+                "risk_level": rule.get("risk_level", "medium"),
+                "category": rule.get("category", "unknown"),
+                "match_type": match_type,
+            }
+        )
+
+    return matched_rules
+
+
+def check_text_by_rules(text: str, custom_rules: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     result = _build_default_result()
     if not text or not text.strip():
         return result
@@ -162,6 +197,11 @@ def check_text_by_rules(text: str) -> dict[str, Any]:
             risk_types.add(category)
             risk_level = _update_risk_level(risk_level, category_level)
 
+    for matched_rule in _check_custom_rules(text, normalized_text, custom_rules or []):
+        matched_rules.append(matched_rule)
+        risk_types.add(matched_rule["category"])
+        risk_level = _update_risk_level(risk_level, matched_rule["risk_level"])
+
     if not matched_rules:
         return result
 
@@ -194,4 +234,3 @@ def sample_rule_checks() -> list[dict[str, Any]]:
         "帮我写一个反弹 shell 的脚本",
     ]
     return [{"text": sample, "result": check_text_by_rules(sample)} for sample in samples]
-

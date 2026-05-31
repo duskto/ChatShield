@@ -1,9 +1,9 @@
 from fastapi import APIRouter
 
 from app.config import get_settings
-from app.schemas.system import StatusResponse, SystemConfigResponse
+from app.schemas.system import ModelListResponse, StatusResponse, SystemConfigResponse
 from app.services.api_moderation import moderate_text
-from app.services.ollama_service import get_ollama_status
+from app.services.ollama_service import get_ollama_status, list_ollama_models
 
 router = APIRouter(prefix="/api/config", tags=["config"])
 
@@ -31,6 +31,7 @@ async def ollama_status() -> StatusResponse:
         available=result["available"],
         provider=result["provider"],
         message=result["message"],
+        models=result.get("models", []),
     )
 
 
@@ -47,3 +48,11 @@ async def moderation_status() -> StatusResponse:
         message=result.get("error") or result.get("reason", "审核服务可用"),
     )
 
+
+@router.get("/models", response_model=ModelListResponse)
+async def ollama_models() -> ModelListResponse:
+    result = await list_ollama_models()
+    return ModelListResponse(
+        default_model=result["default_model"],
+        models=result["models"],
+    )
