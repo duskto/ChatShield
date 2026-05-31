@@ -84,11 +84,19 @@ ChatShield/
 先在宿主机安装 Ollama，然后拉取推荐模型：
 
 ```bash
-ollama pull qwen2.5:3b
-ollama run qwen2.5:3b
+ollama pull qwen3:4b
+ollama run qwen3:4b
 ```
 
-默认模型为 `qwen2.5:3b`，也可以改成 `qwen2.5:1.5b` 或 `qwen2.5:7b`。
+默认模型为 `qwen3:4b`。如果你通过 Docker 运行 ChatShield，建议让宿主机上的 Ollama 长期监听 `0.0.0.0:11434`，这样容器才能通过 `host.docker.internal:11434` 访问它。
+
+Linux `systemd` 长期配置示例：
+
+```ini
+[Service]
+Environment="OLLAMA_HOST=0.0.0.0:11434"
+Environment="OLLAMA_MODELS=/opt/ollama-models"
+```
 
 ## 后端启动方式
 
@@ -120,7 +128,7 @@ npm run dev
 ## Docker 启动方式
 
 ```bash
-docker compose up --build
+docker compose up -d --build
 ```
 
 启动后：
@@ -132,7 +140,9 @@ docker compose up --build
 
 - `docker-compose.yml` 默认假设 Ollama 运行在宿主机
 - Backend 通过 `host.docker.internal:11434` 访问 Ollama
-- Compose 默认关闭 API 审核，需要时可改环境变量并注入密钥
+- Compose 会读取 `backend/.env`
+- Compose 默认启用 DeepSeek 审核
+- Backend 和 Frontend 都带有健康检查与 `unless-stopped` 重启策略
 
 ## .env 配置说明
 
@@ -168,7 +178,7 @@ ENABLE_API_MODERATION=true
 MODERATION_PROVIDER=deepseek
 DEEPSEEK_API_KEY=your_key
 DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-chat
+DEEPSEEK_MODEL=deepseek-v4-flash
 ```
 
 ### OpenAI Moderation
@@ -249,8 +259,9 @@ OPENAI_MODERATION_MODEL=omni-moderation-latest
 
 检查：
 
-- `ollama serve` 是否运行
+- `systemctl status ollama` 或 `ollama serve` 是否运行
 - `OLLAMA_BASE_URL` 是否正确
+- Ollama 是否监听 `0.0.0.0:11434`
 - 模型是否已拉取
 
 ### 3. API 审核失败
