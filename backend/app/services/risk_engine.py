@@ -46,19 +46,19 @@ def build_safe_result(reason: str = "未发现明显风险", provider: str | Non
 def merge_detection_results(rule_result: dict[str, Any], api_result: dict[str, Any]) -> dict[str, Any]:
     rule_level = normalize_risk_level(rule_result.get("risk_level"))
     api_level = normalize_risk_level(api_result.get("risk_level"))
+    risk_types = sorted(set(rule_result.get("risk_types", [])) | set(api_result.get("risk_types", [])))
 
     if rule_level == "critical" or api_level == "critical":
         final_level = "critical"
     elif rule_level == "high" or api_level == "high":
         final_level = "high"
     elif rule_level == "medium" and api_level == "medium":
-        final_level = "high"
+        final_level = "medium" if set(risk_types) == {"privacy"} else "high"
     elif rule_level == "medium" or api_level == "medium":
         final_level = "medium"
     else:
         final_level = "low"
 
-    risk_types = sorted(set(rule_result.get("risk_types", [])) | set(api_result.get("risk_types", [])))
     if HIGH_PRIORITY_TYPES & set(risk_types):
         final_level = compare_risk_levels(final_level, "high")
 
@@ -66,7 +66,7 @@ def merge_detection_results(rule_result: dict[str, Any], api_result: dict[str, A
     sources = []
     if rule_result:
         sources.append("rule")
-    if api_result:
+    if api_result.get("provider") not in {None, "none"} or api_result.get("error"):
         sources.append("api")
 
     result = build_safe_result(reason="；".join(dict.fromkeys(reasons)) or "未发现明显风险")
@@ -100,3 +100,6 @@ def finalize_detection_result(result: dict[str, Any], block_threshold: str) -> d
     )
     return result
 
+
+def should_skip_api_moderation(rule_result: dict[str, Any], block_threshold: str) -> bool:
+    return is_level_at_least(rule_result.get("risk_level", "low"), block_threshold)

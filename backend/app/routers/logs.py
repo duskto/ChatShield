@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.schemas.log import AuditLogListResponse
-from app.services.audit_service import get_audit_log_by_id, list_audit_logs, to_audit_log_item
+from app.services.audit_service import get_audit_log_by_id, list_audit_logs, to_audit_log_item, to_audit_log_list_item
 
 router = APIRouter(prefix="/api/logs", tags=["logs"])
 
@@ -34,7 +34,7 @@ def get_logs(
         page_size=page_size,
     )
     return AuditLogListResponse(
-        items=[to_audit_log_item(item) for item in items],
+        items=[to_audit_log_list_item(item) for item in items],
         total=total,
         page=page,
         page_size=page_size,
@@ -47,4 +47,3 @@ def get_log_detail(log_id: int, db: Session = Depends(get_db)) -> dict:
     if not log:
         raise HTTPException(status_code=404, detail="日志不存在")
     return to_audit_log_item(log).model_dump()
-

@@ -51,6 +51,8 @@ def _normalize_result(payload: dict[str, Any]) -> dict[str, Any]:
         risk_types = [risk_types]
     risk_types = [item for item in risk_types if item and item != "normal"]
     risk_level = normalize_risk_level(payload.get("risk_level"))
+    if risk_types and set(risk_types) == {"privacy"} and risk_level == "high":
+        risk_level = "medium"
     return {
         "safe": payload.get("safe", risk_level == "low"),
         "risk_level": risk_level,
@@ -59,6 +61,31 @@ def _normalize_result(payload: dict[str, Any]) -> dict[str, Any]:
         "provider": "deepseek",
         "raw": payload,
     }
+
+
+def _sanitize_raw_response(data: dict[str, Any]) -> dict[str, Any]:
+    sanitized = {
+        "id": data.get("id"),
+        "object": data.get("object"),
+        "created": data.get("created"),
+        "model": data.get("model"),
+        "usage": data.get("usage"),
+        "system_fingerprint": data.get("system_fingerprint"),
+        "choices": [],
+    }
+    for choice in data.get("choices", []):
+        message = choice.get("message", {})
+        sanitized["choices"].append(
+            {
+                "index": choice.get("index"),
+                "finish_reason": choice.get("finish_reason"),
+                "message": {
+                    "role": message.get("role"),
+                    "content": message.get("content"),
+                },
+            }
+        )
+    return sanitized
 
 
 async def moderate_with_deepseek(text: str) -> dict[str, Any]:
@@ -88,6 +115,5 @@ async def moderate_with_deepseek(text: str) -> dict[str, Any]:
     content = data["choices"][0]["message"]["content"]
     parsed = _extract_json_payload(content)
     result = _normalize_result(parsed)
-    result["raw"] = data
+    result["raw"] = _sanitize_raw_response(data)
     return result
-

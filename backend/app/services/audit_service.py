@@ -3,10 +3,10 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from app.models.audit_log import AuditLog
-from app.schemas.log import AuditLogItem
+from app.schemas.log import AuditLogItem, AuditLogListItem
 
 
 def json_dumps(data: Any) -> str | None:
@@ -76,6 +76,26 @@ def to_audit_log_item(log: AuditLog) -> AuditLogItem:
     )
 
 
+def to_audit_log_list_item(log: AuditLog) -> AuditLogListItem:
+    return AuditLogListItem(
+        id=log.id,
+        user_message=log.user_message,
+        model_name=log.model_name,
+        final_reply=log.final_reply,
+        input_risk_level=log.input_risk_level,
+        output_risk_level=log.output_risk_level,
+        input_risk_types=json_loads(log.input_risk_types, []),
+        output_risk_types=json_loads(log.output_risk_types, []),
+        input_blocked=log.input_blocked,
+        output_blocked=log.output_blocked,
+        blocked_stage=log.blocked_stage,
+        action=log.action,
+        reason=log.reason,
+        latency_ms=log.latency_ms,
+        created_at=log.created_at,
+    )
+
+
 def list_audit_logs(
     db: Session,
     risk_level: str | None = None,
@@ -122,7 +142,26 @@ def list_audit_logs(
 
     total = query.count()
     items = (
-        query.order_by(AuditLog.created_at.desc())
+        query.options(
+            load_only(
+                AuditLog.id,
+                AuditLog.user_message,
+                AuditLog.model_name,
+                AuditLog.final_reply,
+                AuditLog.input_risk_level,
+                AuditLog.output_risk_level,
+                AuditLog.input_risk_types,
+                AuditLog.output_risk_types,
+                AuditLog.input_blocked,
+                AuditLog.output_blocked,
+                AuditLog.blocked_stage,
+                AuditLog.action,
+                AuditLog.reason,
+                AuditLog.latency_ms,
+                AuditLog.created_at,
+            )
+        )
+        .order_by(AuditLog.created_at.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()
@@ -132,4 +171,3 @@ def list_audit_logs(
 
 def get_audit_log_by_id(db: Session, log_id: int) -> AuditLog | None:
     return db.query(AuditLog).filter(AuditLog.id == log_id).first()
-

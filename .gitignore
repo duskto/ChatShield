@@ -12,6 +12,8 @@ venv/
 node_modules/
 dist/
 backend/chatshield.db
+backend/data/*
+!backend/data/.gitkeep
 backend/.env
 frontend/.env
 .agents/

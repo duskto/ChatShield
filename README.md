@@ -141,6 +141,7 @@ docker compose up -d --build
 - `docker-compose.yml` 默认假设 Ollama 运行在宿主机
 - Backend 通过 `host.docker.internal:11434` 访问 Ollama
 - Compose 会读取 `backend/.env`
+- SQLite 数据会持久化到 `backend/data/chatshield.db`
 - Compose 默认启用 DeepSeek 审核
 - Backend 和 Frontend 都带有健康检查与 `unless-stopped` 重启策略
 

@@ -9,7 +9,12 @@ from app.schemas.chat import ChatRequest
 from app.services.api_moderation import moderate_text
 from app.services.audit_service import create_audit_log
 from app.services.ollama_service import chat_with_ollama
-from app.services.risk_engine import build_safe_result, finalize_detection_result, merge_detection_results
+from app.services.risk_engine import (
+    build_safe_result,
+    finalize_detection_result,
+    merge_detection_results,
+    should_skip_api_moderation,
+)
 from app.services.rule_checker import check_text_by_rules
 from app.services.rule_service import list_enabled_rules
 from app.utils.response import safe_block_reply
@@ -39,7 +44,11 @@ async def create_chat(request: ChatRequest, db: Session = Depends(get_db)) -> di
         if settings.enable_rule_check
         else build_safe_result(reason="本地规则检测已禁用", provider="rule")
     )
-    input_api_result = await moderate_text(request.message, stage="input")
+    input_api_result = (
+        build_safe_result(reason="本地规则检测已达到拦截阈值，跳过 API 审核", provider="none")
+        if should_skip_api_moderation(input_rule_result, settings.input_block_threshold)
+        else await moderate_text(request.message, stage="input")
+    )
     input_detection = finalize_detection_result(
         merge_detection_results(input_rule_result, input_api_result),
         settings.input_block_threshold,
@@ -116,7 +125,11 @@ async def create_chat(request: ChatRequest, db: Session = Depends(get_db)) -> di
         if settings.enable_rule_check
         else build_safe_result(reason="本地规则检测已禁用", provider="rule")
     )
-    output_api_result = await moderate_text(model_reply, stage="output")
+    output_api_result = (
+        build_safe_result(reason="本地规则检测已达到拦截阈值，跳过 API 审核", provider="none")
+        if should_skip_api_moderation(output_rule_result, settings.output_block_threshold)
+        else await moderate_text(model_reply, stage="output")
+    )
     output_detection = finalize_detection_result(
         merge_detection_results(output_rule_result, output_api_result),
         settings.output_block_threshold,

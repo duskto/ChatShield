@@ -2,7 +2,7 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from app.models.audit_log import AuditLog
 from app.services.audit_service import json_loads, to_audit_log_item
@@ -10,7 +10,28 @@ from app.services.risk_engine import compare_risk_levels
 
 
 def get_dashboard_stats(db: Session) -> dict[str, Any]:
-    logs = db.query(AuditLog).order_by(AuditLog.created_at.desc()).all()
+    logs = (
+        db.query(AuditLog)
+        .options(
+            load_only(
+                AuditLog.id,
+                AuditLog.user_message,
+                AuditLog.input_risk_level,
+                AuditLog.output_risk_level,
+                AuditLog.input_risk_types,
+                AuditLog.output_risk_types,
+                AuditLog.input_api_result,
+                AuditLog.output_api_result,
+                AuditLog.input_blocked,
+                AuditLog.output_blocked,
+                AuditLog.blocked_stage,
+                AuditLog.reason,
+                AuditLog.created_at,
+            )
+        )
+        .order_by(AuditLog.created_at.desc())
+        .all()
+    )
 
     total_requests = len(logs)
     input_blocked = sum(1 for log in logs if log.input_blocked)
@@ -21,7 +42,7 @@ def get_dashboard_stats(db: Session) -> dict[str, Any]:
     risk_type_distribution: Counter[str] = Counter()
     daily_requests: defaultdict[str, int] = defaultdict(int)
     recent_high_risk_logs: list[dict[str, Any]] = []
-    api_moderation_count = 0
+    api_moderation_calls = 0
 
     for log in logs:
         input_level = log.input_risk_level or "low"
@@ -38,11 +59,11 @@ def get_dashboard_stats(db: Session) -> dict[str, Any]:
         if log.input_api_result:
             provider = json_loads(log.input_api_result, {}).get("provider")
             if provider and provider != "none":
-                api_moderation_count += 1
+                api_moderation_calls += 1
         if log.output_api_result:
             provider = json_loads(log.output_api_result, {}).get("provider")
             if provider and provider != "none":
-                api_moderation_count += 1
+                api_moderation_calls += 1
 
         if final_level in {"high", "critical"} and len(recent_high_risk_logs) < 10:
             item = to_audit_log_item(log)
@@ -62,7 +83,8 @@ def get_dashboard_stats(db: Session) -> dict[str, Any]:
         "input_blocked": input_blocked,
         "output_blocked": output_blocked,
         "allowed": allowed,
-        "api_moderation_count": api_moderation_count,
+        "api_moderation_calls": api_moderation_calls,
+        "api_moderation_count": api_moderation_calls,
         "risk_level_distribution": dict(risk_level_distribution),
         "risk_type_distribution": dict(risk_type_distribution),
         "daily_requests": [
@@ -71,4 +93,3 @@ def get_dashboard_stats(db: Session) -> dict[str, Any]:
         ],
         "recent_high_risk_logs": recent_high_risk_logs,
     }
-
