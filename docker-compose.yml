@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: chatshield-backend
+    ports:
+      - "8000:8000"
+    working_dir: /app
+    environment:
+      APP_NAME: ChatShield
+      APP_ENV: docker
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+      DATABASE_URL: sqlite:///./chatshield.db
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: qwen2.5:3b
+      OLLAMA_TIMEOUT: 120
+      ENABLE_RULE_CHECK: "true"
+      ENABLE_API_MODERATION: "false"
+      MODERATION_PROVIDER: deepseek
+      INPUT_BLOCK_THRESHOLD: high
+      OUTPUT_BLOCK_THRESHOLD: high
+      SAVE_RAW_TEXT: "true"
+      CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: chatshield-frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
