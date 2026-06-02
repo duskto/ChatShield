@@ -20,18 +20,11 @@ class Settings(BaseSettings):
 
     enable_rule_check: bool = Field(default=True, alias="ENABLE_RULE_CHECK")
     enable_api_moderation: bool = Field(default=True, alias="ENABLE_API_MODERATION")
-    moderation_provider: str = Field(default="deepseek", alias="MODERATION_PROVIDER")
+    moderation_provider: str = "deepseek"
 
     deepseek_api_key: str = Field(default="", alias="DEEPSEEK_API_KEY")
     deepseek_base_url: str = Field(default="https://api.deepseek.com", alias="DEEPSEEK_BASE_URL")
     deepseek_model: str = Field(default="deepseek-chat", alias="DEEPSEEK_MODEL")
-
-    openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
-    openai_base_url: str = Field(default="https://api.openai.com/v1", alias="OPENAI_BASE_URL")
-    openai_moderation_model: str = Field(
-        default="omni-moderation-latest",
-        alias="OPENAI_MODERATION_MODEL",
-    )
 
     input_block_threshold: str = Field(default="high", alias="INPUT_BLOCK_THRESHOLD")
     output_block_threshold: str = Field(default="high", alias="OUTPUT_BLOCK_THRESHOLD")
@@ -48,4 +41,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

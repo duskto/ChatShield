@@ -2,7 +2,6 @@ from typing import Any
 
 from app.config import get_settings
 from app.services.deepseek_moderation import moderate_with_deepseek
-from app.services.openai_moderation import moderate_with_openai
 from app.services.risk_engine import build_safe_result
 
 
@@ -19,13 +18,7 @@ async def moderate_text(text: str, stage: str = "input") -> dict[str, Any]:
     if not text or not text.strip():
         return build_safe_result(provider="none")
 
-    provider = settings.moderation_provider.lower().strip()
     try:
-        if provider == "deepseek":
-            return await moderate_with_deepseek(text)
-        if provider == "openai":
-            return await moderate_with_openai(text)
-        return build_fallback_result(f"未知审核提供商: {provider}")
+        return await moderate_with_deepseek(text)
     except Exception as exc:  # noqa: BLE001
         return build_fallback_result(f"{stage} moderation failed: {exc}")
-

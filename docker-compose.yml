@@ -20,7 +20,6 @@ services:
       OLLAMA_TIMEOUT: 120
       ENABLE_RULE_CHECK: "true"
       ENABLE_API_MODERATION: "true"
-      MODERATION_PROVIDER: deepseek
       INPUT_BLOCK_THRESHOLD: high
       OUTPUT_BLOCK_THRESHOLD: high
       SAVE_RAW_TEXT: "true"

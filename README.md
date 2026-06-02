@@ -156,7 +156,6 @@ docker compose up -d --build
 | `OLLAMA_MODEL` | 默认模型 |
 | `ENABLE_RULE_CHECK` | 是否启用本地规则检测 |
 | `ENABLE_API_MODERATION` | 是否启用 API 审核 |
-| `MODERATION_PROVIDER` | `deepseek` 或 `openai` |
 | `INPUT_BLOCK_THRESHOLD` | 输入拦截阈值 |
 | `OUTPUT_BLOCK_THRESHOLD` | 输出拦截阈值 |
 | `SAVE_RAW_TEXT` | 是否保存原始输入输出 |
@@ -176,20 +175,9 @@ docker compose up -d --build
 
 ```env
 ENABLE_API_MODERATION=true
-MODERATION_PROVIDER=deepseek
 DEEPSEEK_API_KEY=your_key
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-v4-flash
-```
-
-### OpenAI Moderation
-
-```env
-ENABLE_API_MODERATION=true
-MODERATION_PROVIDER=openai
-OPENAI_API_KEY=your_key
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODERATION_MODEL=omni-moderation-latest
 ```
 
 ## 演示场景
