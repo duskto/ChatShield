@@ -11,7 +11,7 @@ def build_fallback_result(error: str) -> dict[str, Any]:
     return result
 
 
-async def moderate_text(text: str, stage: str = "input") -> dict[str, Any]:
+async def moderate_text(text: str, stage: str = "input", require_strict_classification: bool = False) -> dict[str, Any]:
     settings = get_settings()
     if not settings.enable_api_moderation:
         return build_safe_result(reason="API 审核已禁用", provider="none")
@@ -19,6 +19,6 @@ async def moderate_text(text: str, stage: str = "input") -> dict[str, Any]:
         return build_safe_result(provider="none")
 
     try:
-        return await moderate_with_deepseek(text)
+        return await moderate_with_deepseek(text, require_strict_classification=require_strict_classification)
     except Exception as exc:  # noqa: BLE001
         return build_fallback_result(f"{stage} moderation failed: {exc}")

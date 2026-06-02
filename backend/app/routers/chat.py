@@ -9,6 +9,7 @@ from app.schemas.chat import ChatRequest
 from app.services.api_moderation import moderate_text
 from app.services.audit_service import create_audit_log
 from app.services.ollama_service import chat_with_ollama
+from app.services.rule_group_file_service import learn_keywords_from_ai_detection
 from app.services.risk_engine import (
     build_safe_result,
     finalize_detection_result,
@@ -21,6 +22,20 @@ from app.utils.response import safe_block_reply
 from app.utils.time import elapsed_ms, utc_now
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+
+def should_force_ai_risk_classification(rule_result: dict) -> bool:
+    return not rule_result.get("matched_rules") and not rule_result.get("risk_types")
+
+
+def maybe_learn_keywords_from_ai(text: str, rule_result: dict, api_result: dict) -> None:
+    if not should_force_ai_risk_classification(rule_result):
+        return
+    if api_result.get("provider") in {None, "none"} or api_result.get("error"):
+        return
+    if not api_result.get("risk_types"):
+        return
+    learn_keywords_from_ai_detection(text, api_result.get("risk_types", []))
 
 
 @router.post("")
@@ -38,8 +53,13 @@ async def create_chat(request: ChatRequest, db: Session = Depends(get_db)) -> di
     input_api_result = (
         build_safe_result(reason="本地规则检测已达到拦截阈值，跳过 API 审核", provider="none")
         if should_skip_api_moderation(input_rule_result, settings.input_block_threshold)
-        else await moderate_text(request.message, stage="input")
+        else await moderate_text(
+            request.message,
+            stage="input",
+            require_strict_classification=should_force_ai_risk_classification(input_rule_result),
+        )
     )
+    maybe_learn_keywords_from_ai(request.message, input_rule_result, input_api_result)
     input_detection = finalize_detection_result(
         merge_detection_results(input_rule_result, input_api_result),
         settings.input_block_threshold,
@@ -119,8 +139,13 @@ async def create_chat(request: ChatRequest, db: Session = Depends(get_db)) -> di
     output_api_result = (
         build_safe_result(reason="本地规则检测已达到拦截阈值，跳过 API 审核", provider="none")
         if should_skip_api_moderation(output_rule_result, settings.output_block_threshold)
-        else await moderate_text(model_reply, stage="output")
+        else await moderate_text(
+            model_reply,
+            stage="output",
+            require_strict_classification=should_force_ai_risk_classification(output_rule_result),
+        )
     )
+    maybe_learn_keywords_from_ai(model_reply, output_rule_result, output_api_result)
     output_detection = finalize_detection_result(
         merge_detection_results(output_rule_result, output_api_result),
         settings.output_block_threshold,

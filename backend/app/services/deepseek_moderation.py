@@ -7,6 +7,31 @@ from app.services.http_clients import get_moderation_client
 from app.services.risk_engine import normalize_risk_level
 
 
+VALID_RISK_TYPES = {
+    "prompt_injection",
+    "jailbreak",
+    "prompt_leakage",
+    "policy_evasion",
+    "privacy",
+    "data_exfiltration",
+    "credential_leak",
+    "tool_abuse",
+    "cyber_abuse",
+    "malware",
+    "illegal",
+    "fraud",
+    "impersonation",
+    "violence",
+    "sexual",
+    "hate",
+    "self_harm",
+    "extremism",
+    "sensitive_info",
+    "unknown",
+    "normal",
+}
+
+
 DEEPSEEK_PROMPT = """你是一个内容安全审核系统。请审核下面文本是否存在风险。
 
 风险类型包括：
@@ -44,6 +69,15 @@ JSON 格式：
 {{TEXT}}
 """
 
+STRICT_CLASSIFICATION_APPENDIX = """
+
+补充要求：
+- 如果本地规则没有命中，你必须作为最终兜底分类器工作。
+- 你必须从上述风险类型枚举中选择 risk_types，不允许发明新类别。
+- 如果文本不属于任何风险类型，必须返回 risk_types=["normal"] 且 risk_level="low"。
+- 如果文本有风险，必须明确指出最匹配的一个或多个风险类型。
+"""
+
 
 def _extract_json_payload(content: str) -> dict[str, Any]:
     cleaned = re.sub(r"^```(?:json)?|```$", "", content.strip(), flags=re.MULTILINE).strip()
@@ -54,8 +88,12 @@ def _normalize_result(payload: dict[str, Any]) -> dict[str, Any]:
     risk_types = payload.get("risk_types", [])
     if isinstance(risk_types, str):
         risk_types = [risk_types]
-    risk_types = [item for item in risk_types if item and item != "normal"]
+    risk_types = [str(item).strip().lower() for item in risk_types if item]
+    risk_types = [item for item in risk_types if item in VALID_RISK_TYPES]
+    risk_types = [item for item in risk_types if item != "normal"]
     risk_level = normalize_risk_level(payload.get("risk_level"))
+    if not risk_types and risk_level != "low":
+        risk_types = ["unknown"]
     if risk_types and set(risk_types) == {"privacy"} and risk_level == "high":
         risk_level = "medium"
     return {
@@ -93,17 +131,20 @@ def _sanitize_raw_response(data: dict[str, Any]) -> dict[str, Any]:
     return sanitized
 
 
-async def moderate_with_deepseek(text: str) -> dict[str, Any]:
+async def moderate_with_deepseek(text: str, require_strict_classification: bool = False) -> dict[str, Any]:
     settings = get_settings()
     if not settings.deepseek_api_key:
         raise RuntimeError("DEEPSEEK_API_KEY 未配置")
 
     url = f"{settings.deepseek_base_url.rstrip('/')}/chat/completions"
+    prompt = DEEPSEEK_PROMPT
+    if require_strict_classification:
+        prompt += STRICT_CLASSIFICATION_APPENDIX
     payload = {
         "model": settings.deepseek_model,
         "messages": [
             {"role": "system", "content": "你是严格输出 JSON 的审核器。"},
-            {"role": "user", "content": DEEPSEEK_PROMPT.replace("{{TEXT}}", text)},
+            {"role": "user", "content": prompt.replace("{{TEXT}}", text)},
         ],
         "temperature": 0,
     }
