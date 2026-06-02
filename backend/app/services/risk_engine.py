@@ -8,7 +8,21 @@ ACTION_MAP = {
     "high": "block",
     "critical": "block",
 }
-HIGH_PRIORITY_TYPES = {"prompt_injection", "credential_leak", "cyber_abuse"}
+HIGH_PRIORITY_TYPES = {
+    "prompt_injection",
+    "jailbreak",
+    "prompt_leakage",
+    "policy_evasion",
+    "data_exfiltration",
+    "credential_leak",
+    "tool_abuse",
+    "cyber_abuse",
+    "malware",
+    "illegal",
+    "fraud",
+    "impersonation",
+    "extremism",
+}
 
 
 def normalize_risk_level(level: str | None) -> str:
