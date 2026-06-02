@@ -1,8 +1,7 @@
 from typing import Any
 
-import httpx
-
 from app.config import get_settings
+from app.services.http_clients import get_moderation_client
 
 
 OPENAI_CATEGORY_MAPPING = {
@@ -40,10 +39,10 @@ async def moderate_with_openai(text: str) -> dict[str, Any]:
         "Content-Type": "application/json",
     }
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.post(url, headers=headers, json=payload)
-        response.raise_for_status()
-        data = response.json()
+    client = get_moderation_client()
+    response = await client.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+    data = response.json()
 
     result = data["results"][0]
     risk_types = _map_categories(result.get("categories", {}))
@@ -56,4 +55,3 @@ async def moderate_with_openai(text: str) -> dict[str, Any]:
         "provider": "openai",
         "raw": data,
     }
-

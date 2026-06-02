@@ -7,12 +7,16 @@ from app.config import get_settings
 from app.database import init_db
 from app.routers import chat, config, dashboard, logs, rules
 from app.schemas.system import HealthResponse
+from app.services.http_clients import close_http_clients
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
-    yield
+    try:
+        yield
+    finally:
+        await close_http_clients()
 
 
 settings = get_settings()

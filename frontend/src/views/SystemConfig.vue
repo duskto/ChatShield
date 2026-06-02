@@ -47,6 +47,8 @@
 </template>
 
 <script setup>
+import { ElAlert, ElButton, ElDescriptions, ElDescriptionsItem } from "element-plus";
+
 import { useAppStore } from "../store/app";
 
 const appStore = useAppStore();

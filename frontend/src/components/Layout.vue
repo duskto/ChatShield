@@ -42,6 +42,7 @@
 
 <script setup>
 import { computed, onMounted } from "vue";
+import { ElMenu, ElMenuItem } from "element-plus";
 import { useRoute } from "vue-router";
 
 import { useAppStore } from "../store/app";

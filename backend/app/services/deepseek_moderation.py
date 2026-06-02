@@ -2,9 +2,8 @@ import json
 import re
 from typing import Any
 
-import httpx
-
 from app.config import get_settings
+from app.services.http_clients import get_moderation_client
 from app.services.risk_engine import normalize_risk_level
 
 
@@ -107,10 +106,10 @@ async def moderate_with_deepseek(text: str) -> dict[str, Any]:
         "Content-Type": "application/json",
     }
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.post(url, headers=headers, json=payload)
-        response.raise_for_status()
-        data = response.json()
+    client = get_moderation_client()
+    response = await client.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+    data = response.json()
 
     content = data["choices"][0]["message"]["content"]
     parsed = _extract_json_payload(content)

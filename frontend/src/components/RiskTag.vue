@@ -4,6 +4,7 @@
 
 <script setup>
 import { computed } from "vue";
+import { ElTag } from "element-plus";
 
 const props = defineProps({
   label: {
@@ -22,4 +23,3 @@ const tagType = computed(() => {
   return "danger";
 });
 </script>
-

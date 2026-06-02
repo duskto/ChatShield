@@ -18,3 +18,4 @@ backend/.env
 frontend/.env
 .agents/
 .codex/
+CHATSHIELD_USER_MANUAL.md

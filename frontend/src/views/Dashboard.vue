@@ -41,11 +41,17 @@
 </template>
 
 <script setup>
-import * as echarts from "echarts";
+import { BarChart, LineChart, PieChart } from "echarts/charts";
+import { GridComponent, TooltipComponent } from "echarts/components";
+import { init, use } from "echarts/core";
+import { CanvasRenderer } from "echarts/renderers";
+import { ElTable, ElTableColumn } from "element-plus";
 import { nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 
 import { fetchDashboardStats } from "../api/dashboard";
 import StatCard from "../components/StatCard.vue";
+
+use([TooltipComponent, GridComponent, PieChart, BarChart, LineChart, CanvasRenderer]);
 
 const stats = reactive({
   total_requests: 0,
@@ -67,9 +73,9 @@ let riskTypeChart;
 let trendChart;
 
 function renderCharts() {
-  riskLevelChart ??= echarts.init(riskLevelChartRef.value);
-  riskTypeChart ??= echarts.init(riskTypeChartRef.value);
-  trendChart ??= echarts.init(trendChartRef.value);
+  riskLevelChart ??= init(riskLevelChartRef.value);
+  riskTypeChart ??= init(riskTypeChartRef.value);
+  trendChart ??= init(trendChartRef.value);
 
   riskLevelChart.setOption({
     tooltip: { trigger: "item" },
@@ -151,4 +157,3 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 </style>
-

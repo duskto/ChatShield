@@ -90,7 +90,23 @@
 
 <script setup>
 import { onMounted, reactive, ref } from "vue";
-import { ElMessage, ElMessageBox } from "element-plus";
+import {
+  ElAlert,
+  ElButton,
+  ElDialog,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElMessage,
+  ElMessageBox,
+  ElOption,
+  ElRadioButton,
+  ElRadioGroup,
+  ElSelect,
+  ElSwitch,
+  ElTable,
+  ElTableColumn,
+} from "element-plus";
 
 import { createRule, deleteRule, fetchRules, updateRule } from "../api/rules";
 
