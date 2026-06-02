@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
@@ -23,9 +23,16 @@ class StatusResponse(BaseModel):
     available: bool
     provider: str
     message: str
-    models: list[str] = []
+    models: list[str] = Field(default_factory=list)
 
 
 class ModelListResponse(BaseModel):
     default_model: str
     models: list[str]
+
+
+class SystemBootstrapResponse(BaseModel):
+    config: SystemConfigResponse
+    ollama_status: StatusResponse
+    moderation_status: StatusResponse
+    models: ModelListResponse

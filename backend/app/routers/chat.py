@@ -16,7 +16,7 @@ from app.services.risk_engine import (
     should_skip_api_moderation,
 )
 from app.services.rule_checker import check_text_by_rules
-from app.services.rule_service import list_enabled_rules
+from app.services.rule_service import list_enabled_rule_snapshots
 from app.utils.response import safe_block_reply
 from app.utils.time import elapsed_ms, utc_now
 
@@ -28,16 +28,7 @@ async def create_chat(request: ChatRequest, db: Session = Depends(get_db)) -> di
     settings = get_settings()
     start_at = utc_now()
     model_name = request.model or settings.ollama_model
-    custom_rules = [
-        {
-            "name": rule.name,
-            "category": rule.category,
-            "pattern": rule.pattern,
-            "match_type": rule.match_type,
-            "risk_level": rule.risk_level,
-        }
-        for rule in list_enabled_rules(db)
-    ]
+    custom_rules = list_enabled_rule_snapshots(db)
 
     input_rule_result = (
         check_text_by_rules(request.message, custom_rules=custom_rules)

@@ -1,15 +1,16 @@
-from fastapi import APIRouter
+import asyncio
+
+from fastapi import APIRouter, Query
 
 from app.config import get_settings
-from app.schemas.system import ModelListResponse, StatusResponse, SystemConfigResponse
-from app.services.api_moderation import moderate_text
+from app.schemas.system import ModelListResponse, StatusResponse, SystemBootstrapResponse, SystemConfigResponse
+from app.services.moderation_status_service import get_moderation_status
 from app.services.ollama_service import get_ollama_status, list_ollama_models
 
 router = APIRouter(prefix="/api/config", tags=["config"])
 
 
-@router.get("", response_model=SystemConfigResponse)
-def get_system_config() -> SystemConfigResponse:
+def _build_system_config_response() -> SystemConfigResponse:
     settings = get_settings()
     return SystemConfigResponse(
         app_name=settings.app_name,
@@ -24,9 +25,7 @@ def get_system_config() -> SystemConfigResponse:
     )
 
 
-@router.get("/ollama/status", response_model=StatusResponse)
-async def ollama_status() -> StatusResponse:
-    result = await get_ollama_status()
+def _build_status_response(result: dict) -> StatusResponse:
     return StatusResponse(
         available=result["available"],
         provider=result["provider"],
@@ -35,18 +34,20 @@ async def ollama_status() -> StatusResponse:
     )
 
 
+@router.get("", response_model=SystemConfigResponse)
+def get_system_config() -> SystemConfigResponse:
+    return _build_system_config_response()
+
+
+@router.get("/ollama/status", response_model=StatusResponse)
+async def ollama_status() -> StatusResponse:
+    result = await get_ollama_status()
+    return _build_status_response(result)
+
+
 @router.get("/moderation/status", response_model=StatusResponse)
-async def moderation_status() -> StatusResponse:
-    settings = get_settings()
-    result = await moderate_text("你好，这是一条状态检查消息", stage="status")
-    available = settings.enable_api_moderation and result.get("provider") not in {None, "none"}
-    if result.get("error"):
-        available = False
-    return StatusResponse(
-        available=available,
-        provider=settings.moderation_provider,
-        message=result.get("error") or result.get("reason", "审核服务可用"),
-    )
+async def moderation_status(refresh: bool = Query(default=False)) -> StatusResponse:
+    return await get_moderation_status(force_refresh=refresh)
 
 
 @router.get("/models", response_model=ModelListResponse)
@@ -55,4 +56,23 @@ async def ollama_models() -> ModelListResponse:
     return ModelListResponse(
         default_model=result["default_model"],
         models=result["models"],
+    )
+
+
+@router.get("/bootstrap", response_model=SystemBootstrapResponse)
+async def config_bootstrap(refresh_status: bool = Query(default=False)) -> SystemBootstrapResponse:
+    config = _build_system_config_response()
+    ollama_result, moderation_result = await asyncio.gather(
+        get_ollama_status(),
+        get_moderation_status(force_refresh=refresh_status),
+    )
+    models = ModelListResponse(
+        default_model=config.ollama_model,
+        models=ollama_result.get("models", []),
+    )
+    return SystemBootstrapResponse(
+        config=config,
+        ollama_status=_build_status_response(ollama_result),
+        moderation_status=moderation_result,
+        models=models,
     )

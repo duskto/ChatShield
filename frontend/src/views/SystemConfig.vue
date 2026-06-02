@@ -54,7 +54,7 @@ import { useAppStore } from "../store/app";
 const appStore = useAppStore();
 
 function refreshStatus() {
-  appStore.hydrate().catch(() => {});
+  appStore.hydrate(true).catch(() => {});
 }
 </script>
 
