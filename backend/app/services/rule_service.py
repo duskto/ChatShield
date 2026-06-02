@@ -20,15 +20,6 @@ def list_rules(db: Session) -> list[Rule]:
     return db.query(Rule).order_by(Rule.created_at.desc(), Rule.id.desc()).all()
 
 
-def list_enabled_rules(db: Session) -> list[Rule]:
-    return (
-        db.query(Rule)
-        .filter(Rule.enabled.is_(True))
-        .order_by(Rule.created_at.desc(), Rule.id.desc())
-        .all()
-    )
-
-
 def list_enabled_rule_snapshots(db: Session) -> list[dict[str, str]]:
     global _enabled_rule_snapshots_cache
 
