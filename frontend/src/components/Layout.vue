@@ -21,7 +21,7 @@
         <div>
           <div class="topbar-title">{{ currentTitle }}</div>
           <div class="topbar-subtitle">
-            默认模型：{{ appStore.defaultModel || appStore.config?.ollama_model || "加载中" }}
+            当前模型：{{ appStore.activeModel || appStore.defaultModel || appStore.config?.ollama_model || "未启动" }}
           </div>
         </div>
         <div class="status-row">

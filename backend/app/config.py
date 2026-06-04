@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     ollama_base_url: str = Field(default="http://localhost:11434", alias="OLLAMA_BASE_URL")
     ollama_model: str = Field(default="qwen2.5:3b", alias="OLLAMA_MODEL")
     ollama_timeout: int = Field(default=120, alias="OLLAMA_TIMEOUT")
+    ollama_keep_alive: str = Field(default="24h", alias="OLLAMA_KEEP_ALIVE")
+    ollama_model_start_timeout: int = Field(default=30, alias="OLLAMA_MODEL_START_TIMEOUT")
 
     enable_rule_check: bool = Field(default=True, alias="ENABLE_RULE_CHECK")
     enable_api_moderation: bool = Field(default=True, alias="ENABLE_API_MODERATION")

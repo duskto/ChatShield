@@ -18,6 +18,8 @@ services:
       OLLAMA_BASE_URL: http://host.docker.internal:11434
       OLLAMA_MODEL: qwen3:4b
       OLLAMA_TIMEOUT: 120
+      OLLAMA_KEEP_ALIVE: 24h
+      OLLAMA_MODEL_START_TIMEOUT: 30
       ENABLE_RULE_CHECK: "true"
       ENABLE_API_MODERATION: "true"
       INPUT_BLOCK_THRESHOLD: high

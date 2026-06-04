@@ -1,11 +1,17 @@
 import asyncio
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from app.config import get_settings
-from app.schemas.system import ModelListResponse, StatusResponse, SystemBootstrapResponse, SystemConfigResponse
+from app.schemas.system import (
+    ModelListResponse,
+    ModelStartRequest,
+    StatusResponse,
+    SystemBootstrapResponse,
+    SystemConfigResponse,
+)
 from app.services.moderation_status_service import get_moderation_status
-from app.services.ollama_service import get_ollama_status, list_ollama_models
+from app.services.ollama_service import get_ollama_status, list_ollama_models, start_ollama_model
 
 router = APIRouter(prefix="/api/config", tags=["config"])
 
@@ -31,6 +37,8 @@ def _build_status_response(result: dict) -> StatusResponse:
         provider=result["provider"],
         message=result["message"],
         models=result.get("models", []),
+        running_models=result.get("running_models", []),
+        active_model=result.get("active_model"),
     )
 
 
@@ -56,7 +64,17 @@ async def ollama_models() -> ModelListResponse:
     return ModelListResponse(
         default_model=result["default_model"],
         models=result["models"],
+        running_models=result.get("running_models", []),
+        active_model=result.get("active_model"),
     )
+
+
+@router.post("/models/start", response_model=StatusResponse)
+async def start_model(request: ModelStartRequest) -> StatusResponse:
+    result = await start_ollama_model(request.model)
+    if not result.get("success"):
+        raise HTTPException(status_code=502, detail=result["message"])
+    return _build_status_response(result["status"])
 
 
 @router.get("/bootstrap", response_model=SystemBootstrapResponse)
@@ -69,6 +87,8 @@ async def config_bootstrap(refresh_status: bool = Query(default=False)) -> Syste
     models = ModelListResponse(
         default_model=config.ollama_model,
         models=ollama_result.get("models", []),
+        running_models=ollama_result.get("running_models", []),
+        active_model=ollama_result.get("active_model"),
     )
     return SystemBootstrapResponse(
         config=config,

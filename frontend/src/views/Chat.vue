@@ -73,7 +73,9 @@ const messages = ref([
 const latestInputDetection = ref(null);
 const latestOutputDetection = ref(null);
 
-const defaultModel = computed(() => appStore.defaultModel || appStore.config?.ollama_model || "qwen2.5:3b");
+const defaultModel = computed(
+  () => appStore.activeModel || appStore.defaultModel || appStore.config?.ollama_model || "qwen2.5:3b",
+);
 const modelOptions = computed(() => (appStore.models?.length ? appStore.models : [defaultModel.value]));
 const form = reactive({
   message: "",

@@ -5,3 +5,7 @@ export function fetchConfigBootstrap(refreshStatus = false) {
     params: { refresh_status: refreshStatus },
   });
 }
+
+export function startOllamaModel(model) {
+  return http.post("/api/config/models/start", { model });
+}

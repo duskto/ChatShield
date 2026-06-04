@@ -13,6 +13,8 @@
           <el-descriptions-item label="环境">{{ appStore.config?.environment }}</el-descriptions-item>
           <el-descriptions-item label="Ollama URL">{{ appStore.config?.ollama_base_url }}</el-descriptions-item>
           <el-descriptions-item label="默认模型">{{ appStore.config?.ollama_model }}</el-descriptions-item>
+          <el-descriptions-item label="当前运行模型">{{ appStore.activeModel || "未启动" }}</el-descriptions-item>
+          <el-descriptions-item label="运行中模型">{{ appStore.runningModels?.join("、") || "暂无" }}</el-descriptions-item>
           <el-descriptions-item label="可用模型">{{ appStore.models?.join("、") || "未获取到" }}</el-descriptions-item>
           <el-descriptions-item label="审核提供商">{{ appStore.config?.moderation_provider }}</el-descriptions-item>
           <el-descriptions-item label="输入拦截阈值">{{ appStore.config?.input_block_threshold }}</el-descriptions-item>
@@ -40,6 +42,24 @@
           :closable="false"
           show-icon
         />
+        <div class="model-actions">
+          <el-select v-model="selectedModel" class="model-select" placeholder="选择要启动的模型">
+            <el-option
+              v-for="model in appStore.models"
+              :key="model"
+              :label="model"
+              :value="model"
+            />
+          </el-select>
+          <el-button
+            type="primary"
+            :loading="appStore.modelStarting"
+            :disabled="!selectedModel"
+            @click="startModel"
+          >
+            启动模型
+          </el-button>
+        </div>
         <el-button type="primary" plain @click="refreshStatus">刷新状态</el-button>
       </div>
     </div>
@@ -47,14 +67,44 @@
 </template>
 
 <script setup>
-import { ElAlert, ElButton, ElDescriptions, ElDescriptionsItem } from "element-plus";
+import { ref, watch } from "vue";
+import { ElAlert, ElButton, ElDescriptions, ElDescriptionsItem, ElMessage, ElOption, ElSelect } from "element-plus";
 
 import { useAppStore } from "../store/app";
 
 const appStore = useAppStore();
+const selectedModel = ref("");
+
+watch(
+  () => [appStore.activeModel, appStore.defaultModel, appStore.models],
+  () => {
+    if (appStore.activeModel) {
+      selectedModel.value = appStore.activeModel;
+      return;
+    }
+    if (!selectedModel.value || !appStore.models.includes(selectedModel.value)) {
+      selectedModel.value = appStore.defaultModel || appStore.models[0] || "";
+    }
+  },
+  { immediate: true, deep: true },
+);
 
 function refreshStatus() {
   appStore.hydrate(true).catch(() => {});
+}
+
+async function startModel() {
+  if (!selectedModel.value) {
+    ElMessage.warning("请先选择一个模型");
+    return;
+  }
+
+  try {
+    await appStore.ensureModelStarted(selectedModel.value);
+    ElMessage.success(`模型 ${selectedModel.value} 已启动`);
+  } catch (error) {
+    ElMessage.error(error.message);
+  }
 }
 </script>
 
@@ -69,5 +119,15 @@ function refreshStatus() {
 .config-title {
   font-size: 20px;
   font-weight: 700;
+}
+
+.model-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.model-select {
+  min-width: 240px;
 }
 </style>

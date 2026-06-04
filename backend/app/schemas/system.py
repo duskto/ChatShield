@@ -24,11 +24,19 @@ class StatusResponse(BaseModel):
     provider: str
     message: str
     models: list[str] = Field(default_factory=list)
+    running_models: list[str] = Field(default_factory=list)
+    active_model: str | None = None
 
 
 class ModelListResponse(BaseModel):
     default_model: str
     models: list[str]
+    running_models: list[str] = Field(default_factory=list)
+    active_model: str | None = None
+
+
+class ModelStartRequest(BaseModel):
+    model: str = Field(min_length=1)
 
 
 class SystemBootstrapResponse(BaseModel):
