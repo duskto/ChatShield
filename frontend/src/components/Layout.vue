@@ -2,11 +2,7 @@
   <div class="layout-shell">
     <aside class="side-nav page-card">
       <div class="brand-block">
-        <div class="brand-mark">CS</div>
-        <div>
-          <div class="brand-name">{{ appStore.title }}</div>
-          <div class="brand-desc">AI Chat 内容安全检测与审计</div>
-        </div>
+        <img class="brand-logo" src="/logo.png" alt="ChatShield logo" />
       </div>
       <el-menu :default-active="$route.path" router class="menu-panel">
         <el-menu-item index="/chat">Chat 对话测试</el-menu-item>
@@ -75,31 +71,14 @@ onMounted(() => {
 
 .brand-block {
   display: flex;
-  gap: 14px;
+  justify-content: center;
   align-items: center;
 }
 
-.brand-mark {
-  width: 52px;
-  height: 52px;
-  display: grid;
-  place-items: center;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #145f59, #2e847d);
-  color: white;
-  font-weight: 800;
-  letter-spacing: 1px;
-}
-
-.brand-name {
-  font-size: 22px;
-  font-weight: 800;
-}
-
-.brand-desc {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 13px;
+.brand-logo {
+  width: 104px;
+  height: 104px;
+  object-fit: contain;
 }
 
 .menu-panel {
