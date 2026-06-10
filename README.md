@@ -74,10 +74,12 @@ ChatShield/
 │   ├── .env.example
 │   └── requirements.txt
 ├── frontend/
+│   ├── .dockerignore
 │   ├── public/
 │   ├── src/
 │   ├── .env.example
-│   └── package.json
+│   ├── package.json
+│   └── package-lock.json
 ├── docker-compose.yml
 └── README.md
 ```
@@ -109,6 +111,7 @@ ChatShield/
 - Docker
 - Docker Compose
 - 宿主机 Ollama 可被容器访问
+- 首次构建时 Docker 需要能访问 PyPI 与 npm registry
 
 ## Ollama 准备
 
@@ -229,6 +232,12 @@ DEEPSEEK_API_KEY=your_key
 ```bash
 docker compose up -d --build
 ```
+
+当前 Docker 构建流程说明：
+
+- 后端镜像会在容器内执行 `pip install -r requirements.txt`
+- 前端镜像会基于 `package-lock.json` 在容器内执行 `npm ci` 与 `npm run build`
+- 不需要先在宿主机手动构建前端 `dist`
 
 ### 3. 访问地址
 
