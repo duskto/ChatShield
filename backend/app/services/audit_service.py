@@ -48,6 +48,9 @@ def create_audit_log(db: Session, payload: dict[str, Any]) -> AuditLog:
     db.add(log)
     db.commit()
     db.refresh(log)
+    from app.services.stats_service import invalidate_dashboard_stats_cache
+
+    invalidate_dashboard_stats_cache()
     return log
 
 

@@ -1,4 +1,6 @@
 from collections import Counter
+from threading import Lock
+from time import monotonic
 from typing import Any
 
 from sqlalchemy import case, func
@@ -6,6 +8,14 @@ from sqlalchemy.orm import Session
 
 from app.models.audit_log import AuditLog
 from app.services.audit_service import json_loads
+
+
+_DASHBOARD_STATS_CACHE_TTL_SECONDS = 10
+_dashboard_stats_cache: dict[str, Any] = {
+    "expires_at": 0.0,
+    "value": None,
+}
+_dashboard_stats_lock = Lock()
 
 
 def _risk_rank_expr(column) -> Any:
@@ -29,7 +39,13 @@ def _final_risk_level_expr() -> Any:
     )
 
 
-def get_dashboard_stats(db: Session) -> dict[str, Any]:
+def invalidate_dashboard_stats_cache() -> None:
+    with _dashboard_stats_lock:
+        _dashboard_stats_cache["expires_at"] = 0.0
+        _dashboard_stats_cache["value"] = None
+
+
+def _compute_dashboard_stats(db: Session) -> dict[str, Any]:
     final_risk_level = _final_risk_level_expr()
     request_date = func.date(AuditLog.created_at)
 
@@ -123,3 +139,21 @@ def get_dashboard_stats(db: Session) -> dict[str, Any]:
         "daily_requests": [{"date": row.date, "count": row.count} for row in daily_rows],
         "recent_high_risk_logs": recent_high_risk_logs,
     }
+
+
+def get_dashboard_stats(db: Session) -> dict[str, Any]:
+    now = monotonic()
+    cached_value = _dashboard_stats_cache["value"]
+    if cached_value is not None and _dashboard_stats_cache["expires_at"] > now:
+        return cached_value
+
+    with _dashboard_stats_lock:
+        now = monotonic()
+        cached_value = _dashboard_stats_cache["value"]
+        if cached_value is not None and _dashboard_stats_cache["expires_at"] > now:
+            return cached_value
+
+        stats = _compute_dashboard_stats(db)
+        _dashboard_stats_cache["value"] = stats
+        _dashboard_stats_cache["expires_at"] = now + _DASHBOARD_STATS_CACHE_TTL_SECONDS
+        return stats

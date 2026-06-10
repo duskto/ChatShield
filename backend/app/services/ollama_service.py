@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 
 from app.config import get_settings
@@ -51,7 +52,10 @@ async def get_ollama_status() -> dict[str, Any]:
     ps_url = f"{base_url}/api/ps"
     try:
         client = get_ollama_client()
-        tags_response, ps_response = await client.get(tags_url, timeout=10), await client.get(ps_url, timeout=10)
+        tags_response, ps_response = await asyncio.gather(
+            client.get(tags_url, timeout=10),
+            client.get(ps_url, timeout=10),
+        )
         tags_response.raise_for_status()
         ps_response.raise_for_status()
         tags_data = tags_response.json()
