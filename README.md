@@ -237,6 +237,7 @@ docker compose up -d --build
 
 - 后端镜像会在容器内执行 `pip install -r requirements.txt`
 - 前端镜像会基于 `package-lock.json` 在容器内执行 `npm ci` 与 `npm run build`
+- 如果更新了前端依赖，先在 `frontend/` 目录执行 `npm install`，再提交新生成的 `package-lock.json`
 - 不需要先在宿主机手动构建前端 `dist`
 
 ### 3. 访问地址
