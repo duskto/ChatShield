@@ -84,90 +84,174 @@ ChatShield/
 └── CHATSHIELD_USER_MANUAL.md
 ```
 
-## 环境要求
+## 部署要求
 
-- Docker 与 Docker Compose
-- 宿主机已安装并运行 Ollama
-- 至少拉取一个可用模型，例如 `qwen3:4b`
+### 通用要求
+
+- Ollama 已安装在宿主机
+- 至少已拉取一个模型，例如 `qwen3:4b`
 - 如需开启语义审核，需要 DeepSeek API Key
 
-## 快速开始
+### Windows 本地部署
 
-### 1. 启动 Ollama 并准备模型
+- Windows 10/11
+- Python 3.11+
+- Node.js 20+
+- npm 10+
 
-先在宿主机启动 Ollama，并拉取模型：
+### Linux 本地部署
+
+- Linux 发行版
+- Python 3.11+
+- Node.js 20+
+- npm 10+
+
+### Docker 部署
+
+- Docker
+- Docker Compose
+- 宿主机 Ollama 可被容器访问
+
+## Ollama 准备
+
+无论采用哪种部署方式，都先在宿主机准备 Ollama：
 
 ```bash
 ollama pull qwen3:4b
 ollama run qwen3:4b
 ```
 
-如果你只想让 ChatShield 接管模型启动，也可以只拉取模型，不先 `run`。当前版本会：
+如果你不想先手动运行模型，也可以只执行 `ollama pull qwen3:4b`。当前版本支持：
 
 - 识别已经运行中的模型
 - 列出已安装但未运行的模型
-- 允许在系统配置页手动启动模型
+- 在系统配置页手动启动指定模型
 
-### 2. 配置后端环境
+## Windows 本地部署
 
-```bash
+### 1. 配置后端
+
+在 PowerShell 中执行：
+
+```powershell
 cd backend
-cp .env.example .env
+Copy-Item .env.example .env
 ```
 
-至少确认这些配置：
+编辑 `backend/.env`，至少确认：
 
 ```env
-OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=qwen3:4b
 ENABLE_API_MODERATION=true
 DEEPSEEK_API_KEY=your_key
 ```
 
-### 3. 使用 Docker 运行
+安装依赖并启动后端：
 
-在仓库根目录执行：
-
-```bash
-docker compose up -d --build
+```powershell
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-启动后访问：
+### 2. 配置前端
 
-- 前端：`http://localhost:8080`
-- 后端：`http://localhost:8000`
+```powershell
+cd ../frontend
+Copy-Item .env.example .env
+npm install
+npm run dev
+```
+
+### 3. 访问地址
+
+- 前端开发服务器：`http://localhost:5173`
+- 后端接口：`http://localhost:8000`
 - OpenAPI：`http://localhost:8000/docs`
 
-关闭服务：
+## Linux 本地部署
 
-```bash
-docker compose down
-```
-
-## 本地开发
-
-### 后端
+### 1. 配置后端
 
 ```bash
 cd backend
 cp .env.example .env
-pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 前端
+编辑 `backend/.env`，至少确认：
+
+```env
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=qwen3:4b
+ENABLE_API_MODERATION=true
+DEEPSEEK_API_KEY=your_key
+```
+
+安装依赖并启动后端：
 
 ```bash
-cd frontend
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### 2. 配置前端
+
+```bash
+cd ../frontend
 cp .env.example .env
 npm install
 npm run dev
 ```
 
-默认地址：
+### 3. 访问地址
 
 - 前端开发服务器：`http://localhost:5173`
-- 后端服务：`http://localhost:8000`
+- 后端接口：`http://localhost:8000`
+- OpenAPI：`http://localhost:8000/docs`
+
+## Docker 部署
+
+### 1. 配置后端环境文件
+
+```bash
+cd backend
+cp .env.example .env
+```
+
+如需开启 DeepSeek 审核，编辑 `backend/.env`：
+
+```env
+DEEPSEEK_API_KEY=your_key
+```
+
+### 2. 启动容器
+
+回到仓库根目录执行：
+
+```bash
+docker compose up -d --build
+```
+
+### 3. 访问地址
+
+- 前端：`http://localhost:8080`
+- 后端：`http://localhost:8000`
+- OpenAPI：`http://localhost:8000/docs`
+
+### 4. 停止服务
+
+```bash
+docker compose down
+```
+
+## 本地开发说明
+
+本地开发推荐使用：
+
+- 后端：`uvicorn --reload`
+- 前端：`npm run dev`
+
+这样改动会实时生效，适合调试规则、接口和页面。
 
 ## 配置说明
 
@@ -197,18 +281,34 @@ npm run dev
 
 ## Ollama 运行说明
 
-Docker 默认假设 Ollama 跑在宿主机，后端容器通过 `host.docker.internal:11434` 访问它。当前 Compose 已内置：
+### Windows / Linux 本地部署
+
+本地部署时，后端默认通过：
+
+```text
+http://127.0.0.1:11434
+```
+
+访问宿主机上的 Ollama。
+
+### Docker 部署
+
+Docker 默认假设 Ollama 运行在宿主机，后端容器通过 `host.docker.internal:11434` 访问它。当前 Compose 已内置：
 
 - `OLLAMA_KEEP_ALIVE=24h`
 - 健康检查
 - `unless-stopped` 重启策略
 
-如果你的系统是 Linux，通常需要让 Ollama 对外监听：
+### Linux 下的额外注意事项
+
+如果你在 Linux 上使用 Docker 部署，通常需要让 Ollama 对外监听：
 
 ```ini
 [Service]
 Environment="OLLAMA_HOST=0.0.0.0:11434"
 ```
+
+修改后重启 Ollama 服务即可。
 
 ## 规则系统说明
 
