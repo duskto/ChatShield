@@ -79,9 +79,7 @@ ChatShield/
 │   ├── .env.example
 │   └── package.json
 ├── docker-compose.yml
-├── README.md
-├── CHATSHIELD_DEV_GUIDE_UPDATED.md
-└── CHATSHIELD_USER_MANUAL.md
+└── README.md
 ```
 
 ## 部署要求

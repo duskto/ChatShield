@@ -19,3 +19,4 @@ frontend/.env
 .agents/
 .codex/
 CHATSHIELD_USER_MANUAL.md
+CHATSHIELD_DEV_GUIDE_UPDATED.md
