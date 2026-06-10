@@ -12,7 +12,6 @@ class DashboardStatsResponse(BaseModel):
     output_blocked: int
     allowed: int
     api_moderation_calls: int
-    api_moderation_count: int
     risk_level_distribution: dict[str, int] = Field(default_factory=dict)
     risk_type_distribution: dict[str, int] = Field(default_factory=dict)
     daily_requests: list[RiskCountItem] = Field(default_factory=list)

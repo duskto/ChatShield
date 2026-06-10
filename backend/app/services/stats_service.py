@@ -133,7 +133,6 @@ def _compute_dashboard_stats(db: Session) -> dict[str, Any]:
         "output_blocked": totals.output_blocked,
         "allowed": totals.allowed,
         "api_moderation_calls": api_moderation_calls,
-        "api_moderation_count": api_moderation_calls,
         "risk_level_distribution": risk_level_distribution,
         "risk_type_distribution": dict(risk_type_distribution),
         "daily_requests": [{"date": row.date, "count": row.count} for row in daily_rows],

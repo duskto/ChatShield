@@ -1,8 +1,18 @@
 import asyncio
+from threading import Lock
+from time import monotonic
 from typing import Any
 
 from app.config import get_settings
 from app.services.http_clients import get_ollama_client
+
+
+_OLLAMA_STATUS_CACHE_TTL_SECONDS = 5
+_ollama_status_cache: dict[str, Any] = {
+    "expires_at": 0.0,
+    "value": None,
+}
+_ollama_status_lock = Lock()
 
 
 def _resolve_active_model(default_model: str, running_models: list[str]) -> str | None:
@@ -45,7 +55,13 @@ async def chat_with_ollama(message: str, model: str | None = None) -> dict[str, 
     }
 
 
-async def get_ollama_status() -> dict[str, Any]:
+def invalidate_ollama_status_cache() -> None:
+    with _ollama_status_lock:
+        _ollama_status_cache["expires_at"] = 0.0
+        _ollama_status_cache["value"] = None
+
+
+async def _fetch_ollama_status() -> dict[str, Any]:
     settings = get_settings()
     base_url = settings.ollama_base_url.rstrip("/")
     tags_url = f"{base_url}/api/tags"
@@ -87,6 +103,27 @@ async def get_ollama_status() -> dict[str, Any]:
         }
 
 
+async def get_ollama_status(force_refresh: bool = False) -> dict[str, Any]:
+    now = monotonic()
+    cached_value = _ollama_status_cache["value"]
+    if not force_refresh and cached_value is not None and _ollama_status_cache["expires_at"] > now:
+        return cached_value
+
+    with _ollama_status_lock:
+        now = monotonic()
+        cached_value = _ollama_status_cache["value"]
+        if not force_refresh and cached_value is not None and _ollama_status_cache["expires_at"] > now:
+            return cached_value
+
+    status = await _fetch_ollama_status()
+
+    with _ollama_status_lock:
+        _ollama_status_cache["value"] = status
+        _ollama_status_cache["expires_at"] = monotonic() + _OLLAMA_STATUS_CACHE_TTL_SECONDS
+
+    return status
+
+
 async def list_ollama_models() -> dict[str, Any]:
     status = await get_ollama_status()
     return {
@@ -116,7 +153,8 @@ async def start_ollama_model(model: str) -> dict[str, Any]:
             "model": model,
         }
 
-    status = await get_ollama_status()
+    invalidate_ollama_status_cache()
+    status = await get_ollama_status(force_refresh=True)
     return {
         "success": True,
         "message": f"模型 {model} 已启动",

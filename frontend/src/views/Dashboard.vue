@@ -58,7 +58,7 @@ const stats = reactive({
   input_blocked: 0,
   output_blocked: 0,
   allowed: 0,
-  api_moderation_count: 0,
+  api_moderation_calls: 0,
   risk_level_distribution: {},
   risk_type_distribution: {},
   daily_requests: [],

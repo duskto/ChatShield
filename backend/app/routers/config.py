@@ -48,8 +48,8 @@ def get_system_config() -> SystemConfigResponse:
 
 
 @router.get("/ollama/status", response_model=StatusResponse)
-async def ollama_status() -> StatusResponse:
-    result = await get_ollama_status()
+async def ollama_status(refresh: bool = Query(default=False)) -> StatusResponse:
+    result = await get_ollama_status(force_refresh=refresh)
     return _build_status_response(result)
 
 
@@ -81,7 +81,7 @@ async def start_model(request: ModelStartRequest) -> StatusResponse:
 async def config_bootstrap(refresh_status: bool = Query(default=False)) -> SystemBootstrapResponse:
     config = _build_system_config_response()
     ollama_result, moderation_result = await asyncio.gather(
-        get_ollama_status(),
+        get_ollama_status(force_refresh=refresh_status),
         get_moderation_status(force_refresh=refresh_status),
     )
     models = ModelListResponse(
