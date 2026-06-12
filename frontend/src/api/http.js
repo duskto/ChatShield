@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const envBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+
 const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000",
+  baseURL: envBaseUrl || "",
   timeout: 120000,
 });
 
@@ -14,4 +16,3 @@ http.interceptors.response.use(
 );
 
 export default http;
-

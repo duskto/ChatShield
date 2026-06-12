@@ -164,6 +164,8 @@ npm install
 npm run dev
 ```
 
+`frontend/.env` 用于本地开发，默认会把前端请求转发到 `http://localhost:8000`。
+
 ### 3. 访问地址
 
 - 前端开发服务器：`http://localhost:5173`
@@ -204,6 +206,8 @@ npm install
 npm run dev
 ```
 
+`frontend/.env` 用于本地开发，默认会把前端请求转发到 `http://localhost:8000`。
+
 ### 3. 访问地址
 
 - 前端开发服务器：`http://localhost:5173`
@@ -219,11 +223,15 @@ cd backend
 cp .env.example .env
 ```
 
+`docker-compose.yml` 会直接读取 `backend/.env`，因此这一步不能省略。
+
 如需开启 DeepSeek 审核，编辑 `backend/.env`：
 
 ```env
 DEEPSEEK_API_KEY=your_key
 ```
+
+Docker 部署默认不要求创建 `frontend/.env`。前端在容器内会优先走同源 `/api`，由 Nginx 反向代理到后端，适合远程服务器部署。
 
 ### 2. 启动容器
 
