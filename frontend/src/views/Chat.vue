@@ -99,12 +99,21 @@ async function submitChat() {
   }
 
   loading.value = true;
-  messages.value.push({ role: "user", content: form.message.trim() });
+  const currentMessage = form.message.trim();
+  const history = messages.value
+    .filter((item) => item.role === "user" || item.role === "assistant")
+    .slice(-8)
+    .map((item) => ({
+      role: item.role,
+      content: item.content,
+    }));
+  messages.value.push({ role: "user", content: currentMessage });
 
   try {
     const data = await sendChatMessage({
-      message: form.message.trim(),
+      message: currentMessage,
       model: form.model || defaultModel.value,
+      history,
     });
     latestInputDetection.value = data.input_detection;
     latestOutputDetection.value = data.output_detection;

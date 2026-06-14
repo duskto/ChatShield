@@ -14,7 +14,6 @@ from app.services.risk_engine import (
     build_safe_result,
     finalize_detection_result,
     merge_detection_results,
-    should_skip_api_moderation,
 )
 from app.services.rule_checker import check_text_by_rules
 from app.services.rule_service import list_enabled_rule_snapshots
@@ -22,6 +21,44 @@ from app.utils.response import safe_block_reply
 from app.utils.time import elapsed_ms, utc_now
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+MAX_CONTEXT_MESSAGES = 6
+MAX_CONTEXT_CONTENT_CHARS = 160
+
+
+def _compact_context_text(text: str, limit: int = MAX_CONTEXT_CONTENT_CHARS) -> str:
+    normalized = " ".join(text.split())
+    if len(normalized) <= limit:
+        return normalized
+    return normalized[: limit - 1].rstrip() + "…"
+
+
+def _summarize_context_item(role: str, content: str, custom_rules: list[dict[str, str]]) -> dict[str, str]:
+    compacted = _compact_context_text(content)
+    if role != "user":
+        return {"role": role, "content": compacted}
+
+    local_detection = check_text_by_rules(content, custom_rules=custom_rules)
+    metadata = [
+        f"intent={local_detection.get('intent', 'unknown')}",
+        f"scenario={local_detection.get('scenario', 'general')}",
+        f"actionability={local_detection.get('actionability', 'low')}",
+    ]
+    if local_detection.get("risk_types"):
+        metadata.append(f"risks={','.join(local_detection['risk_types'])}")
+    return {
+        "role": role,
+        "content": f"[{' | '.join(metadata)}] {compacted}",
+    }
+
+
+def _build_context_messages(history: list, custom_rules: list[dict[str, str]]) -> list[dict[str, str]]:
+    messages: list[dict[str, str]] = []
+    for item in history[-MAX_CONTEXT_MESSAGES:]:
+        content = item.content.strip()
+        if not content:
+            continue
+        messages.append(_summarize_context_item(item.role, content, custom_rules))
+    return messages
 
 
 def should_force_ai_risk_classification(rule_result: dict) -> bool:
@@ -44,6 +81,7 @@ async def create_chat(request: ChatRequest, db: Session = Depends(get_db)) -> di
     start_at = utc_now()
     model_name = request.model or settings.ollama_model
     custom_rules = list_enabled_rule_snapshots(db)
+    context_messages = _build_context_messages(request.history, custom_rules)
 
     input_rule_result = (
         check_text_by_rules(request.message, custom_rules=custom_rules)
@@ -51,17 +89,16 @@ async def create_chat(request: ChatRequest, db: Session = Depends(get_db)) -> di
         else build_safe_result(reason="本地规则检测已禁用", provider="rule")
     )
     input_api_result = (
-        build_safe_result(reason="本地规则检测已达到拦截阈值，跳过 API 审核", provider="none")
-        if should_skip_api_moderation(input_rule_result, settings.input_block_threshold)
-        else await moderate_text(
+        await moderate_text(
             request.message,
             stage="input",
             require_strict_classification=should_force_ai_risk_classification(input_rule_result),
+            context_messages=context_messages,
         )
     )
     maybe_learn_keywords_from_ai(request.message, input_rule_result, input_api_result)
     input_detection = finalize_detection_result(
-        merge_detection_results(input_rule_result, input_api_result),
+        merge_detection_results(input_rule_result, input_api_result, stage="input"),
         settings.input_block_threshold,
     )
 
@@ -137,17 +174,19 @@ async def create_chat(request: ChatRequest, db: Session = Depends(get_db)) -> di
         else build_safe_result(reason="本地规则检测已禁用", provider="rule")
     )
     output_api_result = (
-        build_safe_result(reason="本地规则检测已达到拦截阈值，跳过 API 审核", provider="none")
-        if should_skip_api_moderation(output_rule_result, settings.output_block_threshold)
-        else await moderate_text(
+        await moderate_text(
             model_reply,
             stage="output",
             require_strict_classification=should_force_ai_risk_classification(output_rule_result),
+            context_messages=[
+                *context_messages,
+                _summarize_context_item("user", request.message.strip(), custom_rules),
+            ],
         )
     )
     maybe_learn_keywords_from_ai(model_reply, output_rule_result, output_api_result)
     output_detection = finalize_detection_result(
-        merge_detection_results(output_rule_result, output_api_result),
+        merge_detection_results(output_rule_result, output_api_result, stage="output"),
         settings.output_block_threshold,
     )
 

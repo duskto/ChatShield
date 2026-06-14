@@ -32,12 +32,23 @@ class Settings(BaseSettings):
     output_block_threshold: str = Field(default="high", alias="OUTPUT_BLOCK_THRESHOLD")
     save_raw_text: bool = Field(default=True, alias="SAVE_RAW_TEXT")
     cors_origins: str = Field(default="*", alias="CORS_ORIGINS")
+    api_reviewable_rule_types: str = Field(
+        default=(
+            "prompt_injection,jailbreak,prompt_leakage,policy_evasion,data_exfiltration,"
+            "tool_abuse,cyber_abuse,malware,illegal,fraud,impersonation,extremism"
+        ),
+        alias="API_REVIEWABLE_RULE_TYPES",
+    )
 
     @property
     def cors_origin_list(self) -> list[str]:
         if self.cors_origins.strip() == "*":
             return ["*"]
         return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
+
+    @property
+    def api_reviewable_rule_type_set(self) -> set[str]:
+        return {item.strip() for item in self.api_reviewable_rule_types.split(",") if item.strip()}
 
 
 @lru_cache

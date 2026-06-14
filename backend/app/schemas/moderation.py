@@ -18,9 +18,11 @@ class DetectionResult(BaseModel):
     risk_types: list[str] = Field(default_factory=list)
     matched_rules: list[MatchedRule] = Field(default_factory=list)
     action: str = "allow"
+    intent: str = "unknown"
+    scenario: str = "general"
+    actionability: str = "low"
     reason: str = "未发现明显风险"
     provider: str | None = None
     raw: dict[str, Any] = Field(default_factory=dict)
     sources: list[str] = Field(default_factory=list)
     error: str | None = None
-

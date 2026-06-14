@@ -9,6 +9,22 @@ from typing import Any
 RULE_GROUP_FILE_PATH = Path(__file__).resolve().parents[2] / "data" / "rule_groups.json"
 DEFAULT_RULE_GROUP_FILE_PATH = Path(__file__).resolve().parents[1] / "resources" / "rule_groups.default.json"
 NON_LEARNABLE_CATEGORIES = {"privacy", "credential_leak", "sensitive_info"}
+NON_LEARNABLE_CANDIDATE_PATTERNS = (
+    r"^\s*(?:rm|del|sudo|chmod|chown|curl|wget|bash|sh|python|powershell|cmd)\b",
+    r"\brm\s+-rf\b",
+    r"\b(?:execute|run)\s+(?:this|the following)\b",
+    r"(?:执行|运行)(?:这个|以下)?(?:命令|代码)",
+    r"(?:帮我|请)?(?:执行|运行)",
+    r"(?:给我|提供).*(?:命令|脚本|步骤)",
+    r"(?:什么意思|是什么|如何防范|怎么防范|风险是什么|仅用于学习|仅用于测试|请勿执行|不要执行)",
+    r"(?:^|[\s'\"`])/(?:[A-Za-z0-9._-]+/)*[A-Za-z0-9._-]*",
+    r"[;&|]{1,2}",
+    r"\$\(",
+    r"`.+`",
+    r"\b(?:select|union|insert|update|delete)\b.+\b(?:from|into|where)\b",
+    r"\b(?:php|python|bash|sh|powershell)\b.+[({]",
+    r"\b(?:payload|webshell|backdoor|exploit|sql injection|反弹\s*shell)\b",
+)
 
 _rule_group_cache: dict[str, Any] = {
     "mtime_ns": None,
@@ -147,7 +163,18 @@ def _extract_keyword_candidates(text: str) -> list[str]:
 
     if not candidates and len(normalized) <= 80:
         candidates.append(normalized)
-    return candidates
+    return [candidate for candidate in candidates if _is_learnable_keyword_candidate(candidate)]
+
+
+def _is_learnable_keyword_candidate(candidate: str) -> bool:
+    normalized = candidate.strip()
+    if len(normalized) < 4:
+        return False
+    if any(re.search(pattern, normalized, flags=re.IGNORECASE) for pattern in NON_LEARNABLE_CANDIDATE_PATTERNS):
+        return False
+    if normalized.count(" ") >= 8:
+        return False
+    return True
 
 
 def learn_keywords_from_ai_detection(text: str, risk_types: list[str]) -> bool:
