@@ -5,7 +5,12 @@ from app.services.deepseek_moderation import _build_moderation_prompt
 from app.services.risk_engine import merge_detection_results
 from app.services.rule_checker import check_text_by_rules
 from app.services.rule_group_file_service import _extract_keyword_candidates
-from app.routers.chat import _build_context_messages
+from app.routers.chat import (
+    _apply_context_state_risk_boost,
+    _build_context_messages,
+    _build_next_context_state,
+    _merge_context_messages,
+)
 
 
 class ModerationGuardrailTests(unittest.TestCase):
@@ -144,6 +149,18 @@ class ModerationGuardrailTests(unittest.TestCase):
         self.assertEqual(len(request.history), 2)
         self.assertEqual(request.history[0].role, "user")
 
+    def test_chat_request_accepts_context_state(self) -> None:
+        request = ChatRequest(
+            message="继续",
+            context_state={
+                "messages": [{"role": "user", "content": "[intent=discuss] sql注入 是什么意思？"}],
+                "recent_risk_types": ["cyber_abuse"],
+            },
+        )
+
+        self.assertEqual(request.context_state.recent_risk_types, ["cyber_abuse"])
+        self.assertEqual(request.context_state.messages[0].role, "user")
+
     def test_moderation_prompt_includes_recent_context(self) -> None:
         prompt = _build_moderation_prompt(
             "那怎么执行？",
@@ -189,6 +206,51 @@ class ModerationGuardrailTests(unittest.TestCase):
 
         self.assertTrue(context_messages[0]["content"].endswith("…"))
         self.assertLess(len(context_messages[0]["content"]), 200)
+
+    def test_context_state_risk_boost_catches_follow_up_action_request(self) -> None:
+        rule_result = check_text_by_rules("那怎么执行？")
+        boosted = _apply_context_state_risk_boost(
+            "那怎么执行？",
+            rule_result,
+            ChatRequest(
+                message="占位",
+                context_state={
+                    "messages": [],
+                    "recent_risk_types": ["cyber_abuse"],
+                },
+            ).context_state,
+        )
+
+        self.assertEqual(boosted["risk_level"], "high")
+        self.assertEqual(boosted["intent"], "execute")
+        self.assertIn("cyber_abuse", boosted["risk_types"])
+
+    def test_merge_context_messages_deduplicates_cached_and_live_items(self) -> None:
+        merged = _merge_context_messages(
+            [{"role": "user", "content": "[intent=discuss] sql注入 是什么意思？"}],
+            [{"role": "user", "content": "[intent=discuss] sql注入 是什么意思？"}],
+            [{"role": "assistant", "content": "这是一个安全漏洞概念。"}],
+        )
+
+        self.assertEqual(len(merged), 2)
+        self.assertEqual(merged[0]["role"], "user")
+        self.assertEqual(merged[1]["role"], "assistant")
+
+    def test_next_context_state_keeps_recent_detection_summary(self) -> None:
+        state = _build_next_context_state(
+            [{"role": "assistant", "content": "之前的摘要"}],
+            latest_user_message={"role": "user", "content": "[intent=discuss] sql注入 是什么意思？"},
+            latest_user_detection={
+                "risk_types": ["cyber_abuse"],
+                "intent": "discuss",
+                "scenario": "security_explanation",
+                "actionability": "low",
+            },
+            latest_assistant_text="这是一个安全漏洞概念。",
+        )
+
+        self.assertEqual(state["recent_risk_types"], ["cyber_abuse"])
+        self.assertEqual(len(state["messages"]), 3)
 
 
 if __name__ == "__main__":

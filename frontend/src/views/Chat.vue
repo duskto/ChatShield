@@ -70,6 +70,7 @@ const messages = ref([
     content: "这里是 ChatShield 演示界面。你可以测试正常聊天、隐私信息和高风险输入拦截。",
   },
 ]);
+const contextState = ref(null);
 const latestInputDetection = ref(null);
 const latestOutputDetection = ref(null);
 
@@ -102,7 +103,7 @@ async function submitChat() {
   const currentMessage = form.message.trim();
   const history = messages.value
     .filter((item) => item.role === "user" || item.role === "assistant")
-    .slice(-8)
+    .slice(-4)
     .map((item) => ({
       role: item.role,
       content: item.content,
@@ -114,7 +115,9 @@ async function submitChat() {
       message: currentMessage,
       model: form.model || defaultModel.value,
       history,
+      context_state: contextState.value,
     });
+    contextState.value = data.context_state || null;
     latestInputDetection.value = data.input_detection;
     latestOutputDetection.value = data.output_detection;
     messages.value.push({ role: "assistant", content: data.reply });
@@ -129,6 +132,7 @@ async function submitChat() {
 
 function clearMessages() {
   messages.value = [];
+  contextState.value = null;
   latestInputDetection.value = null;
   latestOutputDetection.value = null;
 }
